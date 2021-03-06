@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<!-- thymeleaf 导入 -->
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <base th:href="@{/}">
+    <title>签名</title>
+    <meta charset="UTF-8">
+    <meta content="width=device-width,minimum-scale=1.0,maximum-scale=1.0,user-scalable=no" name="viewport" />
+    <script type="text/javascript" src="jquery-3.3.1.min.js"></script>
+
+    <style>
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            overflow-y: hidden;
+            background-color: #FFFFFF;
+        }
+
+        body {
+            display: flex;
+            align-items: center; /*定义body的元素垂直居中*/
+            justify-content: center; /*定义body的里的元素水平居中*/
+        }
+
+        #canvas {
+            width: 96%;
+            height: 40%;
+        }
+
+        #canvas canvas {
+            border: solid 1px #DEDEDE;
+            display: block;
+        }
+
+        .btn {
+            width: 24%;
+            height: 40px;
+            line-height: 40px;
+            text-align: center;
+            float:left;
+            border: 1px solid #DEDEDE;
+            z-index: 1;
+            margin: 0;
+        }
+
+        #cancelSign {
+            left: 0;
+        }
+
+        #clearCanvas {
+            left: 25%;
+        }
+
+        #saveCanvas {
+            left: 50%;
+        }
+
+        #defaultSignApprove {
+            width: 25%;
+            left: 75%;
+        }
+    </style>
+</head>
+<body bgcolor="#FFFFFF">
+<div id="canvas">
+    <p id="cancelSign" class="btn">取消</p>
+    <p id="clearCanvas" class="btn">清除</p>
+    <p id="saveCanvas" class="btn">确认</p>
+    <p id="defaultSignApprove" class="btn">印签</p>
+</div>
+<script th:inline="javascript">
+
+    window.onload = function() {
+        //初始化划线画布
+        new lineCanvas({
+            el: document.getElementById("canvas"),//绘制canvas的父级div
+            cancelSign: document.getElementById("cancelSign"),// 取消按钮
+            clearEl: document.getElementById("clearCanvas"),//清除按钮
+            saveEl: document.getElementById("saveCanvas"),//保存按钮
+            defaultSignApprove: document.getElementById("defaultSignApprove"),//保存按钮
+            linewidth:2//线条粗细，选填
+            //      color:"black",//线条颜色，选填
+            //      background:"#ffffff"//线条背景，选填
+        });
+        document.body.addEventListener('touchmove' , function(e){
+            e.preventDefault();
+        });
+        document.getElementById("clearCanvas").click();
+    };
+
+    // 已签名
+    var signed = false;
+
+    function lineCanvas(obj) {
+        this.linewidth = 1;
+        this.color = "#000000";
+        this.background = "#ffffff";
+        for (var i in obj) {
+            this[i] = obj[i];
+        }
+        this.canvas = document.createElement("canvas");
+        this.el.insertBefore(this.canvas, this.el.childNodes[0]);
+        this.cxt = this.canvas.getContext("2d");
+        this.canvas.width = this.el.clientWidth - 2;
+        this.canvas.height = this.el.clientHeight;
+        this.cxt.fillStyle = this.background;
+        this.cxt.fillRect(0, 0, this.canvas.width, this.canvas.width);
+        this.cxt.strokeStyle = this.color;
+        this.cxt.lineWidth = this.linewidth;
+        this.cxt.lineCap = "round";
+        //开始绘制
+        this.canvas.addEventListener("touchstart", function(e) {
+            e.preventDefault();
+            this.cxt.beginPath();
+            var coverPos = this.canvas.getBoundingClientRect();
+            this.cxt.moveTo(e.changedTouches[0].clientX -coverPos.left, e.changedTouches[0].clientY- coverPos.top);
+        }.bind(this), false);
+        //绘制中
+        this.canvas.addEventListener("touchmove", function(e) {
+            e.preventDefault();
+            var coverPos = this.canvas.getBoundingClientRect();
+            this.cxt.lineTo(e.changedTouches[0].clientX -coverPos.left, e.changedTouches[0].clientY- coverPos.top);
+            this.cxt.stroke();
+            signed = true;
+        }.bind(this), false);
+        //结束绘制
+        this.canvas.addEventListener("touchend", function(e) {
+            e.preventDefault();
+            this.cxt.closePath();
+        }.bind(this), false);
+        // 取消
+        this.cancelSign.addEventListener("click", function() {
+            parent.cancelSign();
+        }.bind(this), false);
+        //清除画布
+        this.clearEl.addEventListener("click", function() {
+            this.cxt.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            signed = false;
+        }.bind(this), false);
+        // 确认按钮
+        this.saveEl.addEventListener("click", function() {
+            if(!signed) {
+                alert("请签名后点击确认按钮!");
+                return;
+            }
+            var imgBase64 = this.canvas.toDataURL("image/png");
+            parent.signedApprove("signApprove", imgBase64);
+        }.bind(this), false);
+        // 印签按钮
+        this.defaultSignApprove.addEventListener("click", function() {
+            parent.signedApprove("defaultSignApprove");
+        }.bind(this), false);
+    }
+</script>
+</body>
+</html>
